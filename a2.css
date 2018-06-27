@@ -107,3 +107,7 @@ td {
 .dead {
   background-color: SlateGrey;
 }
+
+.display-none {
+  display: none;
+}
