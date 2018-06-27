@@ -11,7 +11,7 @@ var o; // overpopulation threshold
 var g_min; // generation minimum
 var g_max; // generation maximum
 
-var gridFillType = { clear:0, random:1 }; // Grid configurations (may add more; handling required for each type)
+var gridFillType = { clear:0, random:1,  custom:2 }; // Grid configurations (may add more; handling required for each type)
 
 var toroidal; // TODO
 
@@ -59,7 +59,20 @@ $(document).ready(function() {
     $(document).on('click', '#reset', function() {
         setGrid(gridFillType.clear);
     });
+        // save button handling
+    $(document).on('click', '#save', function() {
+        saveGrid();
+    });
     
+    $('#load').click(function() {
+        uploadFile();
+    });
+
+    $(document).on('change', '#load_input', function(){
+        console.log("changed");
+        getData(this.files[0]);
+    });
+
     // randomize dansity slider handling
     $(document).on('change', '#randomize_density', function() {
         $('label #randomize_density_display').text(parseInt($('#randomize_density').val(), 10) / 100);
@@ -368,27 +381,32 @@ var setGrid = function(grid_fill_type) {
     // make new cell array
     size = parseInt($('#grid_size').val(), 10);
     var actual_size = r + size + r;
-    cells = new Array(actual_size);
+    var new_cells = new Array(actual_size);
     for (var i = 0; i < actual_size; i++) {
-        cells[i] = new Array(actual_size);
+        new_cells[i] = new Array(actual_size);
     }
     // fill non-edge cells first
     switch(grid_fill_type) {
         case gridFillType.clear: // fill with uninitiated cells
             for (var y = r; y < r+size; y++) {
                 for (var x = r; x < r+size; x++) {
-                    cells[y][x] = false;
+                    new_cells[y][x] = false;
                 }
             }
+            cells = new_cells;
+            break;
+        case gridFillType.custom: //cell set from file
+            console.log(cells);
             break;
         case gridFillType.random: // fill randomly
         default:
             var threshold = parseInt($('#randomize_density').val(), 10) / 100;
             for (var y = r; y < r+size; y++) {
                 for (var x = r; x < r+size; x++) {
-                    cells[y][x] = getRandomBoolean(threshold);
+                    new_cells[y][x] = getRandomBoolean(threshold);
                 }
             }
+            cells = new_cells;
             break;
     }
     
@@ -403,3 +421,51 @@ var setGrid = function(grid_fill_type) {
 var getRandomBoolean = function(thresh) {
     return Math.random() < thresh;
 };
+
+var uploadFile = function(){
+    if (typeof window.FileReader === 'undefined') {
+        alert("Upload not supported on this browser");
+        return false;
+    }
+    $('#load_input').click();
+}
+
+var saveGrid = function(){
+    console.log(cells);
+    var currentStatus = {
+        "size" : size,
+        "cells" : cells
+    }
+    console.log(currentStatus);
+    var textToSave = JSON.stringify(currentStatus);
+    // function download(filename, text) {
+        var element = document.createElement('a');
+        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(textToSave));
+        element.setAttribute('download', 'grid.json');
+    
+        element.style.display = 'none';
+        document.body.appendChild(element);
+    
+        element.click();
+    
+        document.body.removeChild(element);
+    // }
+};
+
+var getData = function(file){
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var data = reader.result;
+        var dataObj = JSON.parse(data);
+        console.log(dataObj);
+        setUploadedGrid(dataObj);
+    }
+    reader.readAsText(file);
+}
+
+var setUploadedGrid = function(grid){
+    $("#grid_size").val(grid.size).trigger("change");
+    cells = grid.cells;
+    console.log(cells);
+    setGrid(gridFillType.custom);
+}
